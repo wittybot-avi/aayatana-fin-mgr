@@ -15,7 +15,10 @@
     "react-router-dom": "^7.10.1",
     "lucide-react": "^0.559.0",
     "recharts": "^3.5.1",
-    "openai": "^6.10.0"
+    "openai": "^6.10.0",
+    "express": "^5.2.1",
+    "@prisma/client": "^7.1.0",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

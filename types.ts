@@ -59,7 +59,7 @@ export interface Transaction {
   projectTag?: string;
   grantId?: number | null;
   receiptUrl?: string;
-  userId?: string; // For RLS
+  userId?: string | null; // For RLS
   createdAt: string;
 }
 

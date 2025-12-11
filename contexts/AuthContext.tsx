@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { db } from '../services/dataStore';
@@ -38,16 +39,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const refreshUser = async () => {
     if (!user) return;
-    // In a real app we fetch from API. 
-    // Here we re-fetch from db mock but db methods are async, so we just use the local instance logic?
-    // We will just read from localStorage users list in db if needed, but for SPA mock:
-    // We can't easily re-fetch "safe user" without password from db without a specific getById method
-    // Let's implement a simple direct read from our mock
-    const users = db.getUsers(); 
-    const updated = users.find(u => u.id === user.id);
-    if(updated) {
-        setUser(updated);
-        localStorage.setItem('currentUser', JSON.stringify(updated));
+    try {
+      // Fetch fresh users list from async source
+      const users = await db.getUsers(); 
+      const updated = users.find((u: User) => u.id === user.id);
+      if(updated) {
+          setUser(updated);
+          localStorage.setItem('currentUser', JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error("Failed to refresh user", error);
     }
   };
 

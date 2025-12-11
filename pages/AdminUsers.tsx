@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/dataStore';
 import { User, PERMISSIONS, WRITE_ACCESS_PERMISSIONS, READ_ONLY_PERMISSIONS, LIMITED_USER_PERMISSIONS } from '../types';
 import { Plus, Trash2, AlertTriangle, Lock, Unlock } from 'lucide-react';
@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export const AdminUsers = () => {
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState<User[]>(db.getUsers());
+  const [users, setUsers] = useState<User[]>([]);
   const [roles] = useState(db.getRoles());
   const [showModal, setShowModal] = useState(false);
   
@@ -19,6 +19,18 @@ export const AdminUsers = () => {
     password: '',
     accessLevel: 'READ_ONLY' 
   });
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const data = await db.getUsers();
+        setUsers(data);
+      } catch (error) {
+        console.error("Failed to load users", error);
+      }
+    };
+    loadUsers();
+  }, []);
 
   if (currentUser?.role !== 'Admin') {
      return (
@@ -45,7 +57,8 @@ export const AdminUsers = () => {
       isFirstLogin: true,
       permissions: permissions
     });
-    setUsers(db.getUsers());
+    const updatedUsers = await db.getUsers();
+    setUsers(updatedUsers);
     setShowModal(false);
     setNewUser({ username: '', name: '', role: 'Employee', email: '', password: '', accessLevel: 'READ_ONLY' });
   };
@@ -53,7 +66,8 @@ export const AdminUsers = () => {
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this user?")) {
       await db.deleteUser(id);
-      setUsers(db.getUsers());
+      const updatedUsers = await db.getUsers();
+      setUsers(updatedUsers);
     }
   };
 
@@ -66,7 +80,8 @@ export const AdminUsers = () => {
 
     const newPermissions = hasWrite ? READ_ONLY_PERMISSIONS : WRITE_ACCESS_PERMISSIONS;
     await db.updateUserPermissions(user.id, newPermissions);
-    setUsers(db.getUsers());
+    const updatedUsers = await db.getUsers();
+    setUsers(updatedUsers);
   };
 
   const hasWriteAccess = (u: User) => u.permissions.includes(PERMISSIONS.EDIT_TRANSACTIONS);

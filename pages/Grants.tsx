@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/dataStore';
 import { Grant, PERMISSIONS } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 
 export const Grants = () => {
   const { user } = useAuth();
-  const [grants, setGrants] = useState(db.getGrants());
+  const [grants, setGrants] = useState<Grant[]>([]);
   const [showModal, setShowModal] = useState(false);
   
   const canEdit = user?.permissions.includes(PERMISSIONS.MANAGE_GRANTS);
@@ -20,11 +20,24 @@ export const Grants = () => {
     amountUtilized: 0
   });
 
+  useEffect(() => {
+    const loadGrants = async () => {
+      try {
+        const data = await db.getGrants();
+        setGrants(data);
+      } catch (error) {
+        console.error("Failed to load grants", error);
+      }
+    };
+    loadGrants();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.name && formData.totalSanctioned) {
        await db.addGrant(formData as any);
-       setGrants(db.getGrants());
+       const updatedGrants = await db.getGrants();
+       setGrants(updatedGrants);
        setShowModal(false);
        setFormData({ name: '', totalSanctioned: 0, amountReceived: 0, deadline: '', amountUtilized: 0 });
     }

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/dataStore';
 import { Users, Plus, Edit } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,7 @@ import { Headcount as HeadcountType, PERMISSIONS } from '../types';
 
 export const Headcount = () => {
   const { user } = useAuth();
-  const [team, setTeam] = useState(db.getHeadcount());
+  const [team, setTeam] = useState<HeadcountType[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -20,6 +20,18 @@ export const Headcount = () => {
     startDate: '',
     allocationPercent: 100
   });
+
+  useEffect(() => {
+    const loadTeam = async () => {
+      try {
+        const data = await db.getHeadcount();
+        setTeam(data);
+      } catch (e) {
+        console.error("Failed to load headcount", e);
+      }
+    };
+    loadTeam();
+  }, []);
 
   const handleEdit = (member: HeadcountType) => {
     setFormData(member);
@@ -46,7 +58,8 @@ export const Headcount = () => {
     } else {
        await db.addHeadcount(formData as any);
     }
-    setTeam(db.getHeadcount());
+    const updatedTeam = await db.getHeadcount();
+    setTeam(updatedTeam);
     setShowModal(false);
   };
 

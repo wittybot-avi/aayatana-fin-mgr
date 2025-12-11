@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/dataStore';
 import { Plus } from 'lucide-react';
 import { InvestorCapital } from '../types';
 
 export const Investors = () => {
-  const [investors, setInvestors] = useState(db.getInvestors());
+  const [investors, setInvestors] = useState<InvestorCapital[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<Partial<InvestorCapital>>({
     investorName: '',
@@ -14,11 +14,24 @@ export const Investors = () => {
     instrument: 'iSAFE'
   });
 
+  useEffect(() => {
+    const loadInvestors = async () => {
+      try {
+        const data = await db.getInvestors();
+        setInvestors(data);
+      } catch (error) {
+        console.error("Failed to load investors", error);
+      }
+    };
+    loadInvestors();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.investorName && formData.amount) {
        await db.addInvestor(formData as any);
-       setInvestors(db.getInvestors());
+       const updatedInvestors = await db.getInvestors();
+       setInvestors(updatedInvestors);
        setShowModal(false);
        setFormData({ investorName: '', dateReceived: new Date().toISOString().split('T')[0], amount: 0, instrument: 'iSAFE' });
     }
