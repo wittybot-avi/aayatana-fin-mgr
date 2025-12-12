@@ -1,37 +1,25 @@
 import { Router } from 'express';
-import { prisma } from '../lib/prisma';
+import { MEMORY_DB } from '../index';
 
 const router = Router();
 
 router.get('/metrics', async (req, res) => {
   try {
+    const txs = MEMORY_DB.transactions;
+
     // 1. Calculate Cash Balance
-    const inflowAgg = await prisma.transaction.aggregate({
-      where: { type: 'INFLOW' },
-      _sum: { amount: true }
-    });
-    const outflowAgg = await prisma.transaction.aggregate({
-      where: { type: 'OUTFLOW' },
-      _sum: { amount: true }
-    });
-    
-    // Prisma returns Decimals or null
-    const inflow = Number(inflowAgg._sum.amount?.toString() || 0);
-    const outflow = Number(outflowAgg._sum.amount?.toString() || 0);
+    const inflow = txs.filter(t => t.type === 'INFLOW').reduce((sum, t) => sum + (t.amount || 0), 0);
+    const outflow = txs.filter(t => t.type === 'OUTFLOW').reduce((sum, t) => sum + (t.amount || 0), 0);
     const currentCashBalance = inflow - outflow;
 
     // 2. Calculate Burn (Last 3 months)
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
     
-    const recentBurnAgg = await prisma.transaction.aggregate({
-      where: { 
-        type: 'OUTFLOW',
-        date: { gte: threeMonthsAgo }
-      },
-      _sum: { amount: true }
-    });
-    const recentBurn = Number(recentBurnAgg._sum.amount?.toString() || 0);
+    const recentBurn = txs
+      .filter(t => t.type === 'OUTFLOW' && new Date(t.date) >= threeMonthsAgo)
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
     const monthlyBurn = recentBurn > 0 ? recentBurn / 3 : 0;
 
     // 3. Runway
@@ -41,7 +29,7 @@ router.get('/metrics', async (req, res) => {
       currentCashBalance,
       monthlyBurn,
       runwayMonths,
-      totalOutflowLastMonth: recentBurn / 3 // Approx
+      totalOutflowLastMonth: recentBurn / 3
     });
   } catch (e) {
     console.error(e);
@@ -51,16 +39,14 @@ router.get('/metrics', async (req, res) => {
 
 router.get('/breakdown', async (req, res) => {
   try {
-    const txs = await prisma.transaction.findMany({
-      where: { type: 'OUTFLOW' },
-      include: { category: true }
-    });
+    const txs = MEMORY_DB.transactions.filter(t => t.type === 'OUTFLOW');
+    const cats = MEMORY_DB.categories;
 
     const breakdown: Record<string, number> = {};
     txs.forEach(t => {
-      const name = t.category?.category || 'Uncategorized';
-      // Safe Decimal conversion
-      breakdown[name] = (breakdown[name] || 0) + Number(t.amount.toString());
+      const cat = cats.find(c => c.id === t.categoryId);
+      const name = cat ? cat.category : 'Uncategorized';
+      breakdown[name] = (breakdown[name] || 0) + (t.amount || 0);
     });
 
     const result = Object.entries(breakdown).map(([name, value]) => ({ name, value }));

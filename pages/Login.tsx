@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/dataStore';
-import { Loader2, Lock, Mail, User as UserIcon, ArrowLeft } from 'lucide-react';
+import { Loader2, Lock, Mail, User as UserIcon, ArrowLeft, AlertTriangle } from 'lucide-react';
 
 export const Login = () => {
   const [view, setView] = useState<'login' | 'forgot' | 'reset-sent'>('login');
@@ -24,16 +25,12 @@ export const Login = () => {
       const user = await db.authenticate(username, password);
       if (user) {
         login(user);
-        if (user.isFirstLogin) {
-          // Temporarily navigate to dashboard instead of change-password as per bypass request
-          navigate('/');
-        } else {
-          navigate('/');
-        }
+        navigate('/');
       } else {
         setError('Invalid username or password');
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error(err);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -46,14 +43,8 @@ export const Login = () => {
     setLoading(true);
     
     try {
-      const exists = await db.resetPasswordRequest(email);
-      // For security, always say "If account exists..." but here we mimic success
-      if (exists) {
-        setView('reset-sent');
-      } else {
-        // Mocking behavior
-        setView('reset-sent'); 
-      }
+      await db.resetPasswordRequest(email);
+      setView('reset-sent'); 
     } catch (err) {
       setError('Failed to process request');
     } finally {
@@ -65,7 +56,6 @@ export const Login = () => {
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col md:flex-row">
         
-        {/* Form Section */}
         <div className="w-full p-8">
           <div className="text-center mb-8">
              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-500 bg-clip-text text-transparent">Aayatana</h1>
@@ -75,7 +65,12 @@ export const Login = () => {
           {view === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <h2 className="text-lg font-semibold text-slate-800 mb-4">Sign In</h2>
-              {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>}
+              {error && (
+                <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-start space-x-2">
+                   <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+                   <span>{error}</span>
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">Username</label>

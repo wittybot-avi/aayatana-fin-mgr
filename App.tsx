@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
@@ -25,13 +26,6 @@ const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) =
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  // Bypass password change for now as per requirements
-  /*
-  if (user.isFirstLogin && location.pathname !== '/change-password') {
-    return <Navigate to="/change-password" replace />;
-  }
-  */
 
   return children;
 };

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { prisma } from '../lib/prisma';
+// No DB import needed for logic only
 
 const router = Router();
 

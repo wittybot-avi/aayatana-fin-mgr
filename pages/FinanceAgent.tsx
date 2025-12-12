@@ -29,7 +29,6 @@ export const FinanceAgent = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Focus input on mount and after sending
   useEffect(() => {
     if (!loading) {
       inputRef.current?.focus();
@@ -44,21 +43,26 @@ export const FinanceAgent = () => {
     setInput('');
     setLoading(true);
 
+    // Filter history for context
     const history = messages.map(m => ({
       role: m.role,
       text: m.text
     }));
 
-    const result = await sendMessageToAgent(userMsg.text, history, user || undefined);
+    try {
+        const result = await sendMessageToAgent(userMsg.text, history, user || undefined);
+        
+        const botMsg: Message = { 
+            id: (Date.now() + 1).toString(), 
+            role: 'assistant', 
+            text: result.text || "I processed that, but have no text response.",
+            toolCalls: result.toolCalls 
+        };
+        setMessages(prev => [...prev, botMsg]);
+    } catch (e) {
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', text: "Sorry, I encountered an error." }]);
+    }
 
-    const botMsg: Message = { 
-      id: (Date.now() + 1).toString(), 
-      role: 'assistant', 
-      text: result.text,
-      toolCalls: result.toolCalls 
-    };
-
-    setMessages(prev => [...prev, botMsg]);
     setLoading(false);
   };
 
@@ -70,7 +74,6 @@ export const FinanceAgent = () => {
   };
 
   const handleFileUpload = (type: 'excel' | 'invoice') => {
-    // Mock file upload
     const fileName = type === 'excel' ? 'transactions_batch.xlsx' : 'invoice_sep23.pdf';
     const userMsg: Message = { 
       id: Date.now().toString(), 
@@ -80,7 +83,6 @@ export const FinanceAgent = () => {
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
     
-    // Simulate processing delay
     setTimeout(() => {
       const botMsg: Message = { 
         id: (Date.now() + 1).toString(), 
@@ -111,7 +113,6 @@ export const FinanceAgent = () => {
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
              <div className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-800'}`}>
                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-               {/* Show tool usage for transparency */}
                {msg.toolCalls && msg.toolCalls.length > 0 && (
                  <div className="mt-2 pt-2 border-t border-slate-200/20 text-xs opacity-70">
                    {msg.toolCalls.map((tc: any, i: number) => (
@@ -138,7 +139,6 @@ export const FinanceAgent = () => {
 
       <div className="p-4 bg-white border-t border-slate-200">
         <div className="flex items-end space-x-2 max-w-4xl mx-auto">
-          {/* File Upload Buttons */}
           <div className="flex space-x-1 mb-1">
              <button onClick={() => handleFileUpload('excel')} className="p-2 text-slate-400 hover:text-green-600 hover:bg-slate-50 rounded-full transition-colors" title="Upload Excel">
                <FileSpreadsheet size={20} />

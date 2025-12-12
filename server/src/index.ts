@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import { prisma } from './lib/prisma';
 import dashboardRoutes from './routes/dashboard';
 import transactionRoutes from './routes/transactions';
 import agentRoutes from './routes/agent';
@@ -9,85 +8,117 @@ import setupSeed from './seed';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors() as any);
-app.use(express.json() as any);
+app.use(cors());
+app.use(express.json());
 
-// Routes
+// --- IN-MEMORY DATA STORE ---
+export const MEMORY_DB = {
+  users: [
+    {
+      id: 1,
+      username: 'Admin',
+      password: 'Admin@123',
+      name: 'System Admin',
+      role: 'Admin',
+      isFirstLogin: false,
+      permissions: JSON.stringify(['manage_users', 'view_financials', 'edit_transactions', 'manage_grants', 'manage_headcount', 'manage_capital'])
+    },
+    {
+      id: 2,
+      username: 'Avinash',
+      password: 'Avinash@123',
+      name: 'Avinash Gowda',
+      role: 'Founder',
+      isFirstLogin: false,
+      permissions: JSON.stringify(['view_financials', 'edit_transactions', 'manage_grants', 'manage_headcount', 'manage_capital'])
+    },
+    {
+      id: 3,
+      username: 'Vinutha',
+      password: 'Vinutha@123',
+      name: 'Vinutha J',
+      role: 'Founder',
+      isFirstLogin: false,
+      permissions: JSON.stringify(['view_financials', 'view_reports'])
+    }
+  ],
+  categories: [
+    { id: 1, category: 'R&D', subcategory: 'Electronics' },
+    { id: 2, category: 'R&D', subcategory: 'Software' },
+    { id: 3, category: 'Salaries', subcategory: 'Founders' },
+    { id: 4, category: 'Revenue', subcategory: 'Product' }
+  ],
+  transactions: [] as any[],
+  grants: [] as any[],
+  headcount: [] as any[],
+  investors: [] as any[]
+};
+
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
+// Health check
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// Chart of accounts routes
+app.get('/api/chart-of-accounts', async (_req, res) => {
+  res.json(MEMORY_DB.categories);
+});
+
+app.post('/api/chart-of-accounts', async (req, res) => {
+  const { category, subcategory, notes } = req.body;
+  const newCat = { id: Date.now(), category, subcategory, notes };
+  MEMORY_DB.categories.push(newCat);
+  res.status(201).json(newCat);
+});
+
+// Mount modular routes
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/agent', agentRoutes);
 
 // Auth Login Route
-app.post('/api/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  try {
-    const user = await prisma.user.findUnique({ where: { username } });
-    if (user && user.password === password) {
-      const { password, ...safeUser } = user;
-      // Parse permissions from string
-      const permissions = JSON.parse(safeUser.permissions || '[]');
-      res.json({ ...safeUser, permissions });
-    } else {
-      res.status(401).json({ error: "Invalid credentials" });
-    }
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Auth error" });
+  const user = MEMORY_DB.users.find(u => u.username === username);
+
+  if (!user || user.password !== password) {
+    return res.status(401).json({ error: "Invalid credentials" });
   }
+
+  const { password: _, ...safeUser } = user;
+  const permissions = JSON.parse(safeUser.permissions || '[]');
+  
+  res.json({
+      message: 'Login successful',
+      user: {
+        id: safeUser.id,
+        username: safeUser.username,
+        role: safeUser.role,
+        permissions: permissions
+      }
+  });
 });
 
 // Users Route
 app.get('/api/users', async (req, res) => {
-  try {
-    const users = await prisma.user.findMany();
-    const safeUsers = users.map(u => {
+  const safeUsers = MEMORY_DB.users.map(u => {
       const { password, ...rest } = u;
       return { ...rest, permissions: JSON.parse(rest.permissions || '[]') };
-    });
-    res.json(safeUsers);
-  } catch (e) {
-     res.status(500).json({ error: "Failed to fetch users" });
-  }
-});
-
-// Chart of Accounts
-app.get('/api/chart-of-accounts', async (req, res) => {
-  const data = await prisma.chartOfAccount.findMany();
-  res.json(data);
-});
-
-// Grants
-app.get('/api/grants', async (req, res) => {
-  const data = await prisma.grant.findMany();
-  res.json(data);
-});
-app.post('/api/grants', async (req, res) => {
-  const data = await prisma.grant.create({ data: req.body });
-  res.json(data);
-});
-
-// Headcount
-app.get('/api/headcount', async (req, res) => {
-  const data = await prisma.headcount.findMany();
-  res.json(data);
-});
-app.post('/api/headcount', async (req, res) => {
-  const data = await prisma.headcount.create({ data: req.body });
-  res.json(data);
-});
-
-// Investors
-app.get('/api/investors', async (req, res) => {
-  const data = await prisma.investorCapital.findMany();
-  res.json(data);
-});
-app.post('/api/investors', async (req, res) => {
-  const data = await prisma.investorCapital.create({ data: req.body });
-  res.json(data);
+  });
+  res.json(safeUsers);
 });
 
 // Start Server
-app.listen(PORT, async () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  await setupSeed(prisma);
+app.listen(Number(PORT), '0.0.0.0', async () => {
+  console.log(`Server running on http://127.0.0.1:${PORT} (In-Memory Mode)`);
 });

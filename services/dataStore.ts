@@ -1,3 +1,4 @@
+
 import { 
   Transaction, 
   TransactionType, 
@@ -14,7 +15,6 @@ import {
   ADMIN_PERMISSIONS,
   LIMITED_USER_PERMISSIONS
 } from '../types';
-import { api } from './api';
 
 // --- Roles Static Definition ---
 const INITIAL_ROLES: RoleDefinition[] = [
@@ -25,125 +25,208 @@ const INITIAL_ROLES: RoleDefinition[] = [
   { name: 'Manager', permissions: LIMITED_USER_PERMISSIONS },
 ];
 
+// --- SEED DATA ---
+
+const INITIAL_USERS: User[] = [
+  { 
+    id: 'u1', 
+    username: 'Admin', 
+    password: 'Admin@123', 
+    name: 'System Admin', 
+    role: 'Admin', 
+    isFirstLogin: false, 
+    permissions: ADMIN_PERMISSIONS 
+  },
+  { 
+    id: 'u2', 
+    username: 'Avinash', 
+    password: 'Avinash@123', 
+    name: 'Avinash Gowda', 
+    role: 'Founder', 
+    isFirstLogin: false, 
+    permissions: WRITE_ACCESS_PERMISSIONS 
+  },
+  { 
+    id: 'u3', 
+    username: 'Vinutha', 
+    password: 'Vinutha@123', 
+    name: 'Vinutha J', 
+    role: 'Founder', 
+    isFirstLogin: false, 
+    permissions: READ_ONLY_PERMISSIONS 
+  },
+  { 
+    id: 'u4', 
+    username: 'Shrikanth', 
+    password: 'Shrikanth@123', 
+    name: 'Shrikanth Rao', 
+    role: 'Founder', 
+    isFirstLogin: false, 
+    permissions: READ_ONLY_PERMISSIONS 
+  }
+];
+
+const INITIAL_CATEGORIES: ChartOfAccount[] = [
+  { id: 1, category: 'R&D', subcategory: 'Electronics' },
+  { id: 2, category: 'R&D', subcategory: 'Software' },
+  { id: 3, category: 'IP', subcategory: 'Patents' },
+  { id: 4, category: 'Salaries', subcategory: 'Founders' },
+  { id: 5, category: 'Salaries', subcategory: 'Engineers' },
+  { id: 6, category: 'Infra', subcategory: 'Cloud/SaaS' },
+  { id: 7, category: 'Travel', subcategory: 'Business' },
+  { id: 8, category: 'Legal', subcategory: 'Compliance' },
+  { id: 9, category: 'Revenue', subcategory: 'Consulting' },
+  { id: 10, category: 'Revenue', subcategory: 'Product' },
+  { id: 11, category: 'Capital', subcategory: 'Investment' },
+];
+
+const INITIAL_PROJECTS = ['Business', 'VoltEdge', 'EcoTrace360', 'VoltVault', 'EcoMetrics', 'EcoMetricsESG'];
+
+const INITIAL_TRANSACTIONS: Transaction[] = [
+  { id: 1, date: '2023-10-01', type: TransactionType.INFLOW, categoryId: 11, amount: 5000000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'Seed Funding Tranche 1', projectTag: 'Business', createdAt: new Date().toISOString() },
+  { id: 2, date: '2023-10-05', type: TransactionType.OUTFLOW, categoryId: 6, amount: 25000, mode: PaymentMode.CREDIT_CARD, description: 'AWS Credits', projectTag: 'VoltEdge', createdAt: new Date().toISOString() },
+  { id: 3, date: '2023-10-15', type: TransactionType.OUTFLOW, categoryId: 1, amount: 150000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'PCB Prototyping', projectTag: 'VoltEdge', createdAt: new Date().toISOString() },
+  { id: 4, date: '2023-11-01', type: TransactionType.OUTFLOW, categoryId: 5, amount: 450000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'Engineering Salaries Oct', projectTag: 'Business', createdAt: new Date().toISOString() },
+];
+
 class DataStore {
+  private users: User[] = INITIAL_USERS;
   private roles: RoleDefinition[] = INITIAL_ROLES;
-  private projectTags: string[] = ['Business', 'VoltEdge', 'EcoTrace360', 'VoltVault', 'EcoMetrics', 'EcoMetricsESG'];
-  private categoriesCache: ChartOfAccount[] = [];
+  private categories: ChartOfAccount[] = INITIAL_CATEGORIES;
+  private transactions: Transaction[] = INITIAL_TRANSACTIONS;
+  private grants: Grant[] = [];
+  private headcount: Headcount[] = [];
+  private investors: InvestorCapital[] = [];
+  private projectTags: string[] = INITIAL_PROJECTS;
 
   constructor() {
-    this.refreshCategories();
-  }
-
-  private async refreshCategories() {
-    try {
-        const cats = await api.get('/chart-of-accounts');
-        if (cats && Array.isArray(cats)) {
-          this.categoriesCache = cats;
-        }
-    } catch (e) { console.error("Failed to load categories", e); }
+    // Mock initialization
   }
 
   // --- Auth & User Methods ---
   
   async authenticate(username: string, password: string): Promise<User | null> {
-    try {
-      const result = await api.post('/login', { username, password });
-      return result;
-    } catch (e) {
-      return null;
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const user = this.users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    
+    if (user && user.password === password) {
+      // Return user without password
+      const { password, ...safeUser } = user;
+      return safeUser as User;
     }
+    return null;
   }
 
   async updateUserProfile(id: string, updates: Partial<User>) {
-    console.warn("User update API not fully implemented in MVP");
-    return true;
+    const idx = this.users.findIndex(u => u.id === id);
+    if (idx !== -1) {
+      this.users[idx] = { ...this.users[idx], ...updates };
+      return true;
+    }
+    return false;
   }
 
   async updateUserPermissions(id: string, permissions: string[]) {
-     console.warn("User perm update API not fully implemented in MVP");
+     const idx = this.users.findIndex(u => u.id === id);
+    if (idx !== -1) {
+      this.users[idx] = { ...this.users[idx], permissions };
+    }
   }
 
   async changePassword(id: string, newPassword: string) {
-     console.warn("Password change API not fully implemented in MVP");
+    const idx = this.users.findIndex(u => u.id === id);
+    if (idx !== -1) {
+      this.users[idx].password = newPassword;
+      this.users[idx].isFirstLogin = false; // flag updated
+      return true;
+    }
+    throw new Error("User not found");
   }
 
   async resetPasswordRequest(usernameOrEmail: string): Promise<boolean> {
-     return true; // Mock
+     return true; // Mock success
   }
 
   // --- User Management (Admin) ---
   
   async getUsers() { 
-      try {
-        const users = await api.get('/users');
-        return Array.isArray(users) ? users : [];
-      } catch(e) { return []; }
+      // Return users without passwords
+      return this.users.map(({ password, ...u }) => u as User);
   }
   
   async addUser(user: Omit<User, 'id'>) {
-      console.warn("Add user API not fully implemented in MVP");
-      return { ...user, id: 'temp' };
+      const newUser = { ...user, id: Math.random().toString(36).substr(2, 9) };
+      this.users.push(newUser as User);
+      return newUser;
   }
   
   async deleteUser(id: string) {
-      console.warn("Delete user API not fully implemented in MVP");
+      this.users = this.users.filter(u => u.id !== id);
   }
 
   getRoles() { return this.roles; }
 
   // --- Transactions ---
-  async getTransactions(user?: User, filter?: { type?: TransactionType, projectTag?: string, categoryId?: number }) {
-    const params: any = {};
-    if (user && !user.permissions.includes(PERMISSIONS.VIEW_FINANCIALS)) {
-        params.userId = user.id;
-    }
-    if (filter?.type) params.type = filter.type;
-    if (filter?.projectTag) params.projectTag = filter.projectTag;
-    if (filter?.categoryId) params.categoryId = filter.categoryId;
 
-    const txs = await api.get('/transactions', params);
-    
-    // Map backend response to Frontend types
-    // Amount comes as string from Prisma Decimal, convert to Number
-    return txs.map((t: any) => ({
-        ...t,
-        amount: Number(t.amount),
-        date: new Date(t.date).toISOString().split('T')[0] // normalize
-    }));
+  async getTransactions(user?: User, filter?: { type?: TransactionType, projectTag?: string, categoryId?: number }) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    let result = [...this.transactions];
+
+    // Row Level Security (Mock)
+    if (user && !user.permissions.includes(PERMISSIONS.VIEW_FINANCIALS)) {
+        result = result.filter(t => t.userId === user.id);
+    }
+
+    if (filter) {
+      if (filter.type) result = result.filter(t => t.type === filter.type);
+      if (filter.projectTag) result = result.filter(t => t.projectTag === filter.projectTag);
+      if (filter.categoryId) result = result.filter(t => t.categoryId === filter.categoryId);
+    }
+    return result.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   async addTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>) {
-    const newTx = await api.post('/transactions', tx);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const newTx: Transaction = {
+      ...tx,
+      id: Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    this.transactions.unshift(newTx);
     
-    // Check Project Tags
+    // Dynamic Project Tags
     if (tx.projectTag && !this.projectTags.includes(tx.projectTag)) {
         this.projectTags.push(tx.projectTag);
     }
+
+    // Update grant utilization if linked
+    if (tx.grantId) {
+       const grantIdx = this.grants.findIndex(g => g.id === tx.grantId);
+       if (grantIdx !== -1) {
+          this.grants[grantIdx].amountUtilized += tx.amount;
+       }
+    }
+
     return newTx;
   }
 
   async deleteTransaction(id: number) {
-     await api.delete(`/transactions/${id}`);
+     this.transactions = this.transactions.filter(t => t.id !== id);
   }
 
   // --- Investors ---
-  async getInvestors() { 
-      const inv = await api.get('/investors');
-      return inv.map((i: any) => ({...i, amount: Number(i.amount)}));
-  }
+
+  async getInvestors() { return [...this.investors]; }
 
   async addInvestor(investor: Omit<InvestorCapital, 'id'>) {
-    const newInv = await api.post('/investors', investor);
+    const newInv = { ...investor, id: Date.now() };
+    this.investors.push(newInv);
     
     // Create linked transaction
-    const categories = this.getCategories();
-    let capitalCategory = categories.find(c => c.category === 'Capital');
+    const capitalCategory = this.categories.find(c => c.category === 'Capital') || this.categories[0];
     
-    // Fallback if cache empty or category not found
-    if (!capitalCategory) {
-       capitalCategory = { id: 11, category: 'Capital', subcategory: 'Investment' }; 
-    }
-
     await this.addTransaction({
       date: investor.dateReceived,
       type: TransactionType.INFLOW,
@@ -152,52 +235,81 @@ class DataStore {
       mode: PaymentMode.ACCOUNT_TRANSFER,
       description: `Investment from ${investor.investorName} (${investor.instrument})`,
       projectTag: 'Business',
-      userId: 'admin' // In real app use current user
-    } as any);
+      userId: 'admin' 
+    });
 
     return newInv;
   }
 
   // --- Grants ---
-  async getGrants() { 
-      const grants = await api.get('/grants');
-      return grants.map((g: any) => ({
-          ...g,
-          totalSanctioned: Number(g.totalSanctioned),
-          amountReceived: Number(g.amountReceived),
-          amountUtilized: Number(g.amountUtilized)
-      }));
-  }
+
+  async getGrants() { return [...this.grants]; }
 
   async addGrant(grant: Omit<Grant, 'id'>) {
-    return await api.post('/grants', grant);
+    const newGrant = { ...grant, id: Date.now(), amountUtilized: 0 };
+    this.grants.push(newGrant);
+    return newGrant;
   }
 
   // --- Headcount ---
-  async getHeadcount() { 
-      const hc = await api.get('/headcount');
-      return hc.map((h: any) => ({ ...h, ctcMonthly: Number(h.ctcMonthly) }));
-  }
+
+  async getHeadcount() { return [...this.headcount]; }
   
   async addHeadcount(member: Omit<Headcount, 'id'>) {
-     return await api.post('/headcount', member);
+     const newMember = { ...member, id: Date.now() };
+     this.headcount.push(newMember);
+     return newMember;
   }
 
   async updateHeadcount(id: number, updates: Partial<Headcount>) {
-     // Placeholder for PUT functionality
-     console.log("Updated HC", id, updates);
+     const idx = this.headcount.findIndex(h => h.id === id);
+     if (idx !== -1) {
+         this.headcount[idx] = { ...this.headcount[idx], ...updates };
+     }
   }
 
   // --- Analytics ---
+
   async getDashboardMetrics() {
-    return await api.get('/dashboard/metrics');
+    const currentCashBalance = this.transactions.reduce((acc, t) => {
+      return t.type === TransactionType.INFLOW ? acc + t.amount : acc - t.amount;
+    }, 0);
+
+    // Calculate burn (last 3 months avg) - Mock Logic
+    const monthlyBurn = this.transactions
+      .filter(t => t.type === TransactionType.OUTFLOW)
+      .reduce((acc, t) => acc + t.amount, 0) / 3 || 0;
+
+    const runwayMonths = monthlyBurn > 0 ? currentCashBalance / monthlyBurn : 0;
+    
+    // Last month outflow
+    const totalOutflowLastMonth = this.transactions
+        .filter(t => t.type === TransactionType.OUTFLOW)
+        .slice(0, 5) // Mock: just take recent few
+        .reduce((acc, t) => acc + t.amount, 0);
+
+    return {
+      currentCashBalance,
+      monthlyBurn,
+      runwayMonths,
+      totalOutflowLastMonth
+    };
   }
 
   async getCategoryBreakdown() {
-    return await api.get('/dashboard/breakdown');
+    const breakdown: any = {};
+    this.transactions
+      .filter(t => t.type === TransactionType.OUTFLOW)
+      .forEach(t => {
+        const cat = this.categories.find(c => c.id === t.categoryId);
+        const name = cat ? cat.category : 'Uncategorized';
+        breakdown[name] = (breakdown[name] || 0) + t.amount;
+      });
+    
+    return Object.keys(breakdown).map(name => ({ name, value: breakdown[name] }));
   }
 
-  getCategories() { return this.categoriesCache; }
+  getCategories() { return this.categories; }
   getProjectTags() { return this.projectTags; }
 }
 
