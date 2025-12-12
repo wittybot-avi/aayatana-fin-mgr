@@ -82,11 +82,13 @@ const INITIAL_CATEGORIES: ChartOfAccount[] = [
 
 const INITIAL_PROJECTS = ['Business', 'VoltEdge', 'EcoTrace360', 'VoltVault', 'EcoMetrics', 'EcoMetricsESG'];
 
+// Helper to get current year for seed data
+const curYear = new Date().getFullYear();
 const INITIAL_TRANSACTIONS: Transaction[] = [
-  { id: 1, date: '2023-10-01', type: TransactionType.INFLOW, categoryId: 11, amount: 5000000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'Seed Funding Tranche 1', projectTag: 'Business', createdAt: new Date().toISOString() },
-  { id: 2, date: '2023-10-05', type: TransactionType.OUTFLOW, categoryId: 6, amount: 25000, mode: PaymentMode.CREDIT_CARD, description: 'AWS Credits', projectTag: 'VoltEdge', createdAt: new Date().toISOString() },
-  { id: 3, date: '2023-10-15', type: TransactionType.OUTFLOW, categoryId: 1, amount: 150000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'PCB Prototyping', projectTag: 'VoltEdge', createdAt: new Date().toISOString() },
-  { id: 4, date: '2023-11-01', type: TransactionType.OUTFLOW, categoryId: 5, amount: 450000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'Engineering Salaries Oct', projectTag: 'Business', createdAt: new Date().toISOString() },
+  { id: 1, date: `${curYear}-04-05`, type: TransactionType.INFLOW, categoryId: 11, amount: 5000000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'Seed Funding Tranche 1', projectTag: 'Business', createdAt: new Date().toISOString() },
+  { id: 2, date: `${curYear}-04-15`, type: TransactionType.OUTFLOW, categoryId: 6, amount: 25000, mode: PaymentMode.CREDIT_CARD, description: 'AWS Credits', projectTag: 'VoltEdge', createdAt: new Date().toISOString() },
+  { id: 3, date: `${curYear}-05-10`, type: TransactionType.OUTFLOW, categoryId: 1, amount: 150000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'PCB Prototyping', projectTag: 'VoltEdge', createdAt: new Date().toISOString() },
+  { id: 4, date: `${curYear}-06-01`, type: TransactionType.OUTFLOW, categoryId: 5, amount: 450000, mode: PaymentMode.ACCOUNT_TRANSFER, description: 'Engineering Salaries', projectTag: 'Business', createdAt: new Date().toISOString() },
 ];
 
 class DataStore {
@@ -184,6 +186,30 @@ class DataStore {
       if (filter.projectTag) result = result.filter(t => t.projectTag === filter.projectTag);
       if (filter.categoryId) result = result.filter(t => t.categoryId === filter.categoryId);
     }
+
+    // Filter by Indian Financial Year (Current) as per IST
+    const now = new Date();
+    // Get components in IST
+    const istDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const currentYear = istDate.getFullYear();
+    const currentMonth = istDate.getMonth(); // 0-11
+    
+    let startYear, endYear;
+    // Financial year starts April 1st
+    // If Jan(0), Feb(1), Mar(2) -> FY is (Year-1) to (Year)
+    if (currentMonth < 3) {
+        startYear = currentYear - 1;
+        endYear = currentYear;
+    } else {
+        startYear = currentYear;
+        endYear = currentYear + 1;
+    }
+    
+    const fyStart = `${startYear}-04-01`;
+    const fyEnd = `${endYear}-03-31`;
+    
+    result = result.filter(t => t.date >= fyStart && t.date <= fyEnd);
+
     return result.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 

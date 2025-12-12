@@ -8,8 +8,8 @@ import setupSeed from './seed';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+app.use(cors() as any);
+app.use(express.json() as any);
 
 // --- IN-MEMORY DATA STORE ---
 export const MEMORY_DB = {
